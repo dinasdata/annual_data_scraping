@@ -33,6 +33,12 @@ def summary_scrap(town,month,year):
  
 
     df = pd.DataFrame({"max_temperature [°C]":tx,"avg_temperature [°C]":t,"min_temperature [°C]":tm,"dew_point [°C]":td,"RR [mm]":RR,"FF [kmh]":ff,"gust_wind[kmh]":rf,"mslp[mb]":mslp})
+    df["RR [mm]"] = df["RR [mm]"].str.replace("mm"," ")
+    df["FF [kmh]"] = df["FF [kmh]"].str.replace("kmh"," ")
+    
+    for i in range(len(df.columns)):
+        df[(df.columns)[i]] = df[(df.columns)[i]].astype("float64")
+    
     try:
         df.to_excel("summary:{}_{}_{}.xlsx".format(town,month,year),sheet_name="sheet1",index = False)
     except:
@@ -41,19 +47,23 @@ def summary_scrap(town,month,year):
     return df
 
 def daily_scrap(town,month,year):
+
     request = requests.get(url + "/{}/{}-{}".format(town,month,year))
     soup = BeautifulSoup(request.text,"lxml")
     table = soup.find("table",{"class","tb7"}).find_all("tr") 
     data = []
+
     def place(array,index,separator):
         storage = []
         for i in range(len(array)):
             storage.append((array[i].split(separator))[index])
 
         return storage
+    
     for i in range(2,len(table)):
         if table[i].text != "":
             data.append(table[i].text.split("|"))
+
     data = np.array(data)  
     date = place(data[:,0],1,"\n")
     temperature = place(data[:,0],2,"\n")
@@ -62,7 +72,12 @@ def daily_scrap(town,month,year):
     ff = place(data[:,2],2,"\n")
     P = place(data[:,4],0,"\n")
     RR = place(data[:,5],0,"\n")
+
     df = pd.DataFrame({"date":date,"temperature[°C]":temperature,"td[°C]":td,"Humidity[%]":U,"wind_speed[m/s]":ff,"Pressure[hPa]":P,"RR[mm]":RR})
+    for i in range(1,len(df.columns)):
+        df[(df.columns)[i]] = df[(df.columns)[i]].astype("float64")
+
+    df["date"] = df["date"].astype("datetime64[ns]")
     try:
         df.to_excel("daily:{}_{}_{}.xlsx".format(town,month,year),sheet_name="sheet1",index = False)
     except:
